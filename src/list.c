@@ -31,12 +31,12 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 /* A doubly-linked list */
 
 struct _ListEntry {
-	ListValue data;
-	ListEntry *prev;
-	ListEntry *next;
+	/*@null@*/ /*@shared@*/ ListValue data;
+	/*@null@*/ /*@dependent@*/ ListEntry *prev;
+	/*@null@*/ /*@owned@*/ ListEntry *next;
 };
 
-void list_free(ListEntry *list)
+void list_free(/*@null@*/ /*@only@*/ ListEntry *list)
 {
 	ListEntry *entry;
 
@@ -56,7 +56,11 @@ void list_free(ListEntry *list)
 	}
 }
 
-ListEntry *list_prepend(ListEntry **list, ListValue data)
+/*@null@*/ /*@only@*/ ListEntry *list_prepend(
+		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
+		/*@null@*/ /*@shared@*/ ListValue data)
+	/*@uses *list@*/
+	/*@requires owned *list@*/
 {
 	ListEntry *newentry;
 
@@ -89,7 +93,11 @@ ListEntry *list_prepend(ListEntry **list, ListValue data)
 	return newentry;
 }
 
-ListEntry *list_append(ListEntry **list, ListValue data)
+/*@null@*/ /*@only@*/ ListEntry *list_append(
+		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
+		/*@null@*/ /*@shared@*/ ListValue data)
+	/*@uses *list@*/
+	/*@requires owned *list@*/
 {
 	ListEntry *rover;
 	ListEntry *newentry;
@@ -133,7 +141,8 @@ ListEntry *list_append(ListEntry **list, ListValue data)
 	return newentry;
 }
 
-ListValue list_data(ListEntry *listentry)
+/*@null@*/ /*@shared@*/ ListValue list_data(
+		/*@null@*/ /*@temp@*/ ListEntry *listentry)
 {
 	if (listentry == NULL) {
 		return LIST_NULL;
@@ -142,14 +151,17 @@ ListValue list_data(ListEntry *listentry)
 	return listentry->data;
 }
 
-void list_set_data(ListEntry *listentry, ListValue value)
+void list_set_data(
+		/*@null@*/ /*@temp@*/ ListEntry *listentry, 
+		/*@null@*/ /*@shared@*/ ListValue value)
 {
 	if (listentry != NULL) {
 		listentry->data = value;
 	}
 }
 
-ListEntry *list_prev(ListEntry *listentry)
+/*@null@*/ /*@dependent@*/ ListEntry *list_prev(
+		/*@null@*/ /*@temp@*/ ListEntry *listentry)
 {
 	if (listentry == NULL) {
 		return NULL;
@@ -158,7 +170,8 @@ ListEntry *list_prev(ListEntry *listentry)
 	return listentry->prev;
 }
 
-ListEntry *list_next(ListEntry *listentry)
+/*@null@*/ /*@dependent@*/ ListEntry *list_next(
+		/*@null@*/ /*@temp@*/ ListEntry *listentry)
 {
 	if (listentry == NULL) {
 		return NULL;
@@ -167,7 +180,8 @@ ListEntry *list_next(ListEntry *listentry)
 	return listentry->next;
 }
 
-ListEntry *list_nth_entry(ListEntry *list, unsigned int n)
+/*@null@*/ /*@dependent@*/ ListEntry *list_nth_entry(
+		/*@null@*/ /*@temp@*/ ListEntry *list, unsigned int n)
 {
 	ListEntry *entry;
 	unsigned int i;
@@ -188,7 +202,8 @@ ListEntry *list_nth_entry(ListEntry *list, unsigned int n)
 	return entry;
 }
 
-ListValue list_nth_data(ListEntry *list, unsigned int n)
+/*@null@*/ /*@shared@*/ ListValue list_nth_data(
+		/*@null@*/ /*@temp@*/ ListEntry *list, unsigned int n)
 {
 	ListEntry *entry;
 
@@ -205,7 +220,7 @@ ListValue list_nth_data(ListEntry *list, unsigned int n)
 	}
 }
 
-unsigned int list_length(ListEntry *list)
+unsigned int list_length(/*@null@*/ /*@temp@*/ ListEntry *list)
 {
 	ListEntry *entry;
 	unsigned int length;
@@ -225,7 +240,8 @@ unsigned int list_length(ListEntry *list)
 	return length;
 }
 
-ListValue *list_to_array(ListEntry *list)
+/*@null@*/ /*@only@*/ ListValue *list_to_array(
+		/*@null@*/ /*@temp@*/ ListEntry *list)
 {
 	ListEntry *rover;
 	ListValue *array;
@@ -247,7 +263,9 @@ ListValue *list_to_array(ListEntry *list)
 	rover = list;
 
 	for (i=0; i<length; ++i) {
-
+		/* Turn off splint null deref check. Rover can't be null, if it was then
+		   it would not iterate this loop. */
+		/*@-nullderef@*/
 		/* Add this node's data */
 
 		array[i] = rover->data;
@@ -255,12 +273,17 @@ ListValue *list_to_array(ListEntry *list)
 		/* Jump to the next list node */
 
 		rover = rover->next;
+		/*@=nullderef@*/
 	}
 
 	return array;
 }
 
-int list_remove_entry(ListEntry **list, ListEntry *entry)
+int list_remove_entry(
+		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
+		/*@null@*/ /*@dependent@*/ ListEntry *entry)
+	/*@uses *list@*/
+	/*@requires owned *list@*/
 {
 	/* If the list is empty, or entry is NULL, always fail */
 
@@ -273,8 +296,11 @@ int list_remove_entry(ListEntry **list, ListEntry *entry)
 	if (entry->prev == NULL) {
 
 		/* Unlink the first entry and update the starting pointer */
-
+		/* Disable warning, entry->prev == NULL implies entry == *list, thus 
+		 * *list is freed by free(entry) later on.*/
+		/*@-mustfreeonly@*/
 		*list = entry->next;
+		/*@=mustfreeonly@*/
 
 		/* Update the second entry's prev pointer, if there is a second
 		 * entry */
@@ -289,7 +315,13 @@ int list_remove_entry(ListEntry **list, ListEntry *entry)
 		 * previous entry.  Update its 'next' pointer to the new
 		 * value */
 
+		/* No NULL deref possible here, entry->prev != NULL because of else 
+		 * clause.
+		 * No leak possible here, entry->prev->next == entry by def, so
+		 * entry->prev->next is never lost.*/
+		/*@-nullderef-mustfreeonly@*/
 		entry->prev->next = entry->next;
+		/*@=nullderef=mustfreeonly@*/
 
 		/* If there is an entry following this one, update its 'prev'
 		 * pointer to the new value */
@@ -301,15 +333,22 @@ int list_remove_entry(ListEntry **list, ListEntry *entry)
 
 	/* Free the list entry */
 
+	/* Though entry was dependent we lost our 'owned' ref by setting 
+	 * entry->prev->next, therefore we need to free entry.*/
+	/*@-dependenttrans@*/
 	free(entry);
+	/*@=dependenttrans@*/
 
 	/* Operation successful */
 
 	return 1;
 }
 
-unsigned int list_remove_data(ListEntry **list, ListEqualFunc callback,
-                              ListValue data)
+unsigned int list_remove_data(
+		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
+		/*@notnull@*/ ListEqualFunc callback,
+        /*@null@*/ /*@temp@*/ ListValue data)
+    /*@uses *list@*/
 {
 	unsigned int entries_removed;
 	ListEntry *rover;
@@ -329,7 +368,11 @@ unsigned int list_remove_data(ListEntry **list, ListEqualFunc callback,
 
 		next = rover->next;
 
-		if (callback(rover->data, data)) {
+		/* Whether or not to release *list depends on whether *list contains 
+		 * data, therefore required action depends on state which splint does 
+		 * not manage to know here.*/
+		/*@-branchstate@*/
+		if (callback(rover->data, data) > 0) {
 
 			/* This data needs to be removed.  Unlink this entry
 			 * from the list. */
@@ -344,7 +387,11 @@ unsigned int list_remove_data(ListEntry **list, ListEqualFunc callback,
 				/* Point the previous entry at its new
 				 * location */
 
+				/* 'Owned' rover->prev->next is not lost since 
+				 * rover->prev->next == rover.*/
+				/*@-mustfreeonly@*/
 				rover->prev->next = rover->next;
+				/*@=mustfreeonly@*/
 			}
 
 			if (rover->next != NULL) {
@@ -362,15 +409,17 @@ unsigned int list_remove_data(ListEntry **list, ListEqualFunc callback,
 
 		rover = next;
 	}
-
+	/*@=branchstate@*/
 	return entries_removed;
 }
 
 /* Function used internally for sorting.  Returns the last entry in the
  * new sorted list */
 
-static ListEntry *list_sort_internal(ListEntry **list,
-                                     ListCompareFunc compare_func)
+static /*@null@*/ /*@dependent@*/ ListEntry *list_sort_internal(
+		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list,
+        /*@notnull@*/ ListCompareFunc compare_func)
+    /*@uses *list@*/
 {
 	ListEntry *pivot;
 	ListEntry *rover;
@@ -446,7 +495,13 @@ static ListEntry *list_sort_internal(ListEntry **list,
 		*list = pivot;
 	} else {
 		pivot->prev = less_list_end;
+
+		/* Value can't be null here because if less_list_end == NULL then so is 
+		 * less_list == NULL, therefore in this else block the ref cannot be 
+		 * NULL*/
+		/*@-nullderef@*/
 		less_list_end->next = pivot;
+		/*@=nullderef@*/
 	}
 
 	/* Append the more list after the pivot */
@@ -467,14 +522,18 @@ static ListEntry *list_sort_internal(ListEntry **list,
 	}
 }
 
-void list_sort(ListEntry **list, ListCompareFunc compare_func)
+void list_sort(
+		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
+		/*@notnull@*/ ListCompareFunc compare_func)
+	/*@uses *list@*/
 {
-	list_sort_internal(list, compare_func);
+	(void) list_sort_internal(list, compare_func);
 }
 
-ListEntry *list_find_data(ListEntry *list,
-                          ListEqualFunc callback,
-                          ListValue data)
+/*@null@*/ /*@dependent@*/ ListEntry *list_find_data(
+		/*@null@*/ /*@temp@*/ ListEntry *list,
+        /*@notnull@*/ ListEqualFunc callback,
+        /*@null@*/ /*@shared@*/ /*@in@*/ ListValue data)
 {
 	ListEntry *rover;
 
@@ -491,7 +550,9 @@ ListEntry *list_find_data(ListEntry *list,
 	return NULL;
 }
 
-void list_iterate(ListEntry **list, ListIterator *iter)
+void list_iterate(
+		/*@notnull@*/ /*@dependent@*/ ListEntry **list, 
+		/*@notnull@*/ /*@temp@*/ ListIterator *iter)
 {
 	/* Start iterating from the beginning of the list. */
 
@@ -502,7 +563,7 @@ void list_iterate(ListEntry **list, ListIterator *iter)
 	iter->current = NULL;
 }
 
-int list_iter_has_more(ListIterator *iter)
+int list_iter_has_more(/*@notnull@*/ /*@temp@*/ ListIterator *iter)
 {
 	if (iter->current == NULL || iter->current != *iter->prev_next) {
 
@@ -511,18 +572,23 @@ int list_iter_has_more(ListIterator *iter)
 		 * list.  Use prev_next to determine if we have a next
 		 * value to iterate over. */
 
+		/*@+boolint@*/
 		return *iter->prev_next != NULL;
+		/*@=boolint@*/
 
 	} else {
 		/* The current entry as not been deleted since the last
 		 * call to list_iter_next: there is a next entry if
 		 * current->next is not NULL */
 
+		/*@+boolint@*/
 		return iter->current->next != NULL;
+		/*@=boolint@*/
 	}
 }
 
-ListValue list_iter_next(ListIterator *iter)
+/*@null@*/ /*@shared@*/ ListValue list_iter_next(
+		/*@notnull@*/ /*@temp@*/ ListIterator *iter)
 {
 	if (iter->current == NULL || iter->current != *iter->prev_next) {
 
@@ -550,7 +616,9 @@ ListValue list_iter_next(ListIterator *iter)
 	}
 }
 
-void list_iter_remove(ListIterator *iter)
+/* Since *iter->prev_next may be null.*/
+/*@-nullstate@*/
+void list_iter_remove(/*@notnull@*/ /*@temp@*/ ListIterator *iter)
 {
 	if (iter->current == NULL || iter->current != *iter->prev_next) {
 
@@ -568,8 +636,17 @@ void list_iter_remove(ListIterator *iter)
 			iter->current->next->prev = iter->current->prev;
 		}
 
+		if (iter->current->prev != NULL) {
+			iter->current->prev->next = iter->current->next;
+		}
+
+		/* Though iter->current is not owned, there are no 'owned' pointers to 
+		 * current. Therefore we need to free it.*/
+		/*@-dependenttrans@*/
 		free(iter->current);
+		/*@=dependenttrans@*/
 		iter->current = NULL;
 	}
 }
+/*@=nullstate@*/
 
