@@ -46,6 +46,8 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 extern "C" {
 #endif
 
+/*@-exportlocal@*/
+
 /**
  * A value to store in @ref SortedArray.
  */
@@ -62,7 +64,7 @@ typedef void *SortedArrayValue;
  *
  * @see sortedarray_new
  */
-typedef struct _SortedArray SortedArray;
+typedef /*@abstract@*/ struct _SortedArray SortedArray;
 
 /**
  * Compare two values in a SortedArray to determine if they are equal.
@@ -73,8 +75,9 @@ typedef struct _SortedArray SortedArray;
  *			equal.
  *
  */
-typedef int (*SortedArrayEqualFunc)(SortedArrayValue value1,
-                                    SortedArrayValue value2);
+typedef int (*SortedArrayEqualFunc)(
+		/*@null@*/ SortedArrayValue value1,
+        /*@null@*/ SortedArrayValue value2);
 
 /**
  * Compare two values in a SortedArray to determine their order.
@@ -85,17 +88,21 @@ typedef int (*SortedArrayEqualFunc)(SortedArrayValue value1,
  * 			value2, zero if they compare equal, or greater than
  * 			zero if value1 compares greate than value2.
  */
-typedef int (*SortedArrayCompareFunc)(SortedArrayValue value1,
-                                      SortedArrayValue value2);
+typedef int (*SortedArrayCompareFunc)(
+		/*@null@*/ SortedArrayValue value1,
+        /*@null@*/ SortedArrayValue value2);
 
 /**
  * @brief Function to retrieve element at index i from array
  *
- * @param array			The pointer to the sortedarray to retrieve the element from.
+ * @param array			The pointer to the sortedarray to retrieve the element 
+ * 						from.
  * @param i				The index of the element to retrieve.
- * @return				The i-th element of the array, or NULL if array was NULL.
+ * @return				The i-th element of the array, or NULL if array was 
+ * 						NULL.
  */
-SortedArrayValue *sortedarray_get(SortedArray *array, unsigned int i);
+/*@null@*/ /*@shared@*/ SortedArrayValue *sortedarray_get(
+		/*@null@*/ /*@temp@*/ SortedArray *array, unsigned int i);
 
 /**
  * @brief Function to retrieve the length of the SortedArray array.
@@ -103,7 +110,7 @@ SortedArrayValue *sortedarray_get(SortedArray *array, unsigned int i);
  * @param array			The array to retrieve the length from.
  * @return				The lenght of the SortedArray.
  */
-unsigned int sortedarray_length(SortedArray *array);
+unsigned int sortedarray_length(/*@null@*/ /*@temp@*/ SortedArray *array);
 
 /**
  * Allocate a new SortedArray for use.
@@ -118,16 +125,17 @@ unsigned int sortedarray_length(SortedArray *array);
  * @return              A new SortedArray or NULL if it was not possible to
  *                      allocate one.
  */
-SortedArray *sortedarray_new(unsigned int length, 
-                             SortedArrayEqualFunc equ_func, 
-                             SortedArrayCompareFunc cmp_func);
+/*@null@*/ /*@only@*/ SortedArray *sortedarray_new(
+		unsigned int length, 
+        /*@null@*/ SortedArrayEqualFunc equ_func, 
+        /*@null@*/ SortedArrayCompareFunc cmp_func);
 
 /**
  * Frees a SortedArray from memory.
  *
  * @param sortedarray   The SortedArray to free.
  */
-void sortedarray_free(SortedArray *sortedarray);
+void sortedarray_free(/*@null@*/ /*@only@*/ /*@in@*/ SortedArray *sortedarray);
 
 /**
  * Remove a value from a SortedArray at a specified index while maintaining the
@@ -136,7 +144,9 @@ void sortedarray_free(SortedArray *sortedarray);
  * @param sortedarray   The SortedArray to remove a value from.
  * @param index         The index to remove from the array.
  */
-void sortedarray_remove(SortedArray *sortedarray, unsigned int index);
+void sortedarray_remove(
+		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
+		unsigned int index);
 
 /**
  * Remove a range of entities from a SortedArray while maintaining the sorted 
@@ -146,8 +156,10 @@ void sortedarray_remove(SortedArray *sortedarray, unsigned int index);
  * @param index         The starting index of the range to remove.
  * @param length        The length of the range to remove.
  */
-void sortedarray_remove_range(SortedArray *sortedarray, unsigned int index,
-                              unsigned int length);
+void sortedarray_remove_range(
+		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
+		unsigned int index,
+        unsigned int length);
 
 /**
  * Insert a value into a SortedArray while maintaining the sorted property.
@@ -157,7 +169,9 @@ void sortedarray_remove_range(SortedArray *sortedarray, unsigned int index,
  *
  * @return              Zero on failure, or a non-zero value if successfull.
  */
-int sortedarray_insert(SortedArray *sortedarray, SortedArrayValue data);
+int sortedarray_insert(
+		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
+		/*@null@*/ /*@shared@*/ SortedArrayValue data);
 
 /**
  * Find the index of a value in a SortedArray.
@@ -166,14 +180,18 @@ int sortedarray_insert(SortedArray *sortedarray, SortedArrayValue data);
  * @param data          The value to find.
  * @return              The index of the value or -1 if the value is not found.
  */
-int sortedarray_index_of(SortedArray *sortedarray, SortedArrayValue data);
+int sortedarray_index_of(
+		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
+		/*@null@*/ /*@shared@*/ SortedArrayValue data);
 
 /**
  * Remove all values from a SortedArray.
  *
  * @param sortedarray   The SortedArray to clear.
  */
-void sortedarray_clear(SortedArray *sortedarray);
+void sortedarray_clear(/*@null@*/ /*@temp@*/ SortedArray *sortedarray);
+
+/*@=exportlocal@*/
 
 #ifdef __cplusplus
 }
