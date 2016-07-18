@@ -551,7 +551,7 @@ void list_sort(
 
 void list_iterate(
 		/*@notnull@*/ /*@dependent@*/ ListEntry **list, 
-		/*@notnull@*/ /*@temp@*/ ListIterator *iter)
+		/*@notnull@*/ /*@temp@*/ /*@out@*/ ListIterator *iter)
 {
 	/* Start iterating from the beginning of the list. */
 

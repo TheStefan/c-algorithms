@@ -314,7 +314,7 @@ void list_sort(
 
 void list_iterate(
 		/*@notnull@*/ /*@dependent@*/ ListEntry **list, 
-		/*@notnull@*/ /*@temp@*/ ListIterator *iter);
+		/*@notnull@*/ /*@temp@*/ /*@out@*/ ListIterator *iter);
 
 /**
  * Determine if there are more values in the list to iterate over.
