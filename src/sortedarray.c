@@ -34,6 +34,8 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include "alloc-testing.h"
 #endif
 
+typedef /*@dependent@*/ SortedArrayValue DepSortedArrayValue;
+
 /**
  * Definition of a @ref SortedArray
  */
@@ -42,7 +44,7 @@ struct _SortedArray {
 	 * This field contains the actual array. The array always has a length
 	 * of value of field length.
 	 */
-	/*@null@*/ /*@owned@*/ SortedArrayValue *data;
+	/*@null@*/ /*@owned@*/ SortedArrayValue* data;
 
 	/**
 	 * The length of the sorted array.
@@ -127,7 +129,7 @@ static unsigned int sortedarray_last_index(
 	return index;
 }
 
-/*@null@*/ /*@shared@*/ SortedArrayValue *sortedarray_get(
+/*@null@*/ /*@dependent@*/ SortedArrayValue sortedarray_get(
 		/*@null@*/ /*@temp@*/ SortedArray *array, unsigned int i)
 {
 	if (array == NULL) {
@@ -138,7 +140,8 @@ static unsigned int sortedarray_last_index(
 	if (i < array->length) {
 		/* Since i < length we have that length != 0, therefore data != NULL. */
 		/*@-nullderef@*/
-		return array->data[i];
+		return *(array->data + i);
+		//return array->data[i];
 		/*@=nullderef@*/
 	} else {
 		return NULL;
@@ -247,7 +250,7 @@ void sortedarray_remove_range(
 
 int sortedarray_insert(
 		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
-		/*@null@*/ /*@shared@*/ SortedArrayValue data)
+		/*@null@*/ /*@dependent@*/ SortedArrayValue data)
 {
 	unsigned int left, right, index;
 
@@ -342,7 +345,7 @@ int sortedarray_insert(
 
 int sortedarray_index_of(
 		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
-		/*@null@*/ /*@shared@*/ SortedArrayValue data)
+		/*@null@*/ /*@dependent@*/ SortedArrayValue data)
 {
 	unsigned int left, right, index;
 	if (sortedarray == NULL) {

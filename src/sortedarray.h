@@ -51,7 +51,7 @@ extern "C" {
 /**
  * A value to store in @ref SortedArray.
  */
-typedef void *SortedArrayValue;
+typedef /*@dependent@*/ void *SortedArrayValue;
 
 /**
  * A SortedArray structure. Use @ref sortedarray_new to create one.
@@ -101,7 +101,7 @@ typedef int (*SortedArrayCompareFunc)(
  * @return				The i-th element of the array, or NULL if array was 
  * 						NULL.
  */
-/*@null@*/ /*@shared@*/ SortedArrayValue *sortedarray_get(
+/*@null@*/ /*@dependent@*/ SortedArrayValue sortedarray_get(
 		/*@null@*/ /*@temp@*/ SortedArray *array, unsigned int i);
 
 /**
@@ -171,7 +171,7 @@ void sortedarray_remove_range(
  */
 int sortedarray_insert(
 		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
-		/*@null@*/ /*@shared@*/ SortedArrayValue data);
+		/*@null@*/ /*@dependent@*/ SortedArrayValue data);
 
 /**
  * Find the index of a value in a SortedArray.
@@ -182,7 +182,7 @@ int sortedarray_insert(
  */
 int sortedarray_index_of(
 		/*@null@*/ /*@temp@*/ SortedArray *sortedarray, 
-		/*@null@*/ /*@shared@*/ SortedArrayValue data);
+		/*@null@*/ /*@dependent@*/ SortedArrayValue data);
 
 /**
  * Remove all values from a SortedArray.
