@@ -32,17 +32,17 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #endif
 
 struct _HashTableEntry {
-	HashTablePair pair;
-	HashTableEntry *next;
+	/*@notnull@*/ /*@only@*/ HashTablePair pair;
+	/*@null@*/ /*@only@*/ HashTableEntry *next;
 };
 
 struct _HashTable {
-	HashTableEntry **table;
+	/*@notnull@*/ /*@only@*/ HashTableEntry **table;
 	unsigned int table_size;
-	HashTableHashFunc hash_func;
-	HashTableEqualFunc equal_func;
-	HashTableKeyFreeFunc key_free_func;
-	HashTableValueFreeFunc value_free_func;
+	/*@notnull@*/ HashTableHashFunc hash_func;
+	/*@notnull@*/ HashTableEqualFunc equal_func;
+	/*@null@*/ HashTableKeyFreeFunc key_free_func;
+	/*@null@*/ HashTableValueFreeFunc value_free_func;
 	unsigned int entries;
 	unsigned int prime_index;
 };
@@ -60,12 +60,14 @@ static const unsigned int hash_table_primes[] = {
 };
 
 static const unsigned int hash_table_num_primes
-	= sizeof(hash_table_primes) / sizeof(int);
+	= (unsigned int) (sizeof(hash_table_primes) / sizeof(int));
 
 /* Internal function used to allocate the table on hash table creation
  * and when enlarging the table */
 
-static int hash_table_allocate_table(HashTable *hash_table)
+static int hash_table_allocate_table(
+		/*@notnull@*/ /*@temp@*/ /*@special@*/ HashTable *hash_table)
+	/*@defines hash_table->table, hash_table->table_size@*/
 {
 	unsigned int new_table_size;
 
@@ -84,15 +86,17 @@ static int hash_table_allocate_table(HashTable *hash_table)
 
 	/* Allocate the table and initialise to NULL for all entries */
 
-	hash_table->table = calloc(hash_table->table_size,
+	hash_table->table = calloc((size_t) hash_table->table_size,
 	                           sizeof(HashTableEntry *));
 
-	return hash_table->table != NULL;
+	return (int) (hash_table->table != NULL);
 }
 
 /* Free an entry, calling the free functions if there are any registered */
 
-static void hash_table_free_entry(HashTable *hash_table, HashTableEntry *entry)
+static void hash_table_free_entry(
+		/*@notnull@*/ /*@temp@*/ HashTable *hash_table, 
+		/*@notnull@*/ /*@only@*/ HashTableEntry *entry)
 {
 	HashTablePair *pair;
 
@@ -101,23 +105,31 @@ static void hash_table_free_entry(HashTable *hash_table, HashTableEntry *entry)
 	/* If there is a function registered for freeing keys, use it to free
 	 * the key */
 
+
+	/* Turned off warning because the memory model is different depending on
+	 * whether or not key_free_func is defined.*/
+	/*@-dependenttrans-branchstate@*/
 	if (hash_table->key_free_func != NULL) {
 		hash_table->key_free_func(pair->key);
 	}
+	/*@=dependenttrans=branchstate@*/
 
 	/* Likewise with the value */
 
+	/*@-dependenttrans-branchstate@*/
 	if (hash_table->value_free_func != NULL) {
 		hash_table->value_free_func(pair->value);
 	}
+	/*@=dependenttrans=branchstate@*/
 
 	/* Free the data structure */
 
 	free(entry);
 }
 
-HashTable *hash_table_new(HashTableHashFunc hash_func,
-                          HashTableEqualFunc equal_func)
+/*@null@*/ /*@only@*/ HashTable *hash_table_new(
+		/*@notnull@*/ HashTableHashFunc hash_func,
+        /*@notnull@*/ HashTableEqualFunc equal_func)
 {
 	HashTable *hash_table;
 
@@ -138,8 +150,10 @@ HashTable *hash_table_new(HashTableHashFunc hash_func,
 
 	/* Allocate the table */
 
-	if (!hash_table_allocate_table(hash_table)) {
+	if (hash_table_allocate_table(hash_table) <= 0) {
+		/*@-compdestroy@*/
 		free(hash_table);
+		/*@=compdestroy@*/
 
 		return NULL;
 	}
@@ -147,11 +161,15 @@ HashTable *hash_table_new(HashTableHashFunc hash_func,
 	return hash_table;
 }
 
-void hash_table_free(HashTable *hash_table)
+void hash_table_free(/*@null@*/ /*@only@*/ /*@in@*/ HashTable *hash_table)
 {
 	HashTableEntry *rover;
 	HashTableEntry *next;
 	unsigned int i;
+
+	if (hash_table == NULL) {
+		return;
+	}
 
 	/* Free all entries in all chains */
 
@@ -171,18 +189,23 @@ void hash_table_free(HashTable *hash_table)
 	/* Free the hash table structure */
 
 	free(hash_table);
-}
 
-void hash_table_register_free_functions(HashTable *hash_table,
-                                        HashTableKeyFreeFunc key_free_func,
-                                        HashTableValueFreeFunc value_free_func)
+	/* Rover is NULL because when the loop terminates rover == NULL */
+	/*@-mustfreeonly@*/
+}
+/*@=mustfreeonly@*/
+
+void hash_table_register_free_functions(
+		/*@notnull@*/ /*@temp@*/ HashTable *hash_table,
+        /*@null@*/ HashTableKeyFreeFunc key_free_func,
+        /*@null@*/ HashTableValueFreeFunc value_free_func)
 {
 	hash_table->key_free_func = key_free_func;
 	hash_table->value_free_func = value_free_func;
 }
 
 
-static int hash_table_enlarge(HashTable *hash_table)
+static int hash_table_enlarge(/*@notnull@*/ /*@temp@*/ HashTable *hash_table)
 {
 	HashTableEntry **old_table;
 	unsigned int old_table_size;
@@ -203,7 +226,10 @@ static int hash_table_enlarge(HashTable *hash_table)
 
 	++hash_table->prime_index;
 
-	if (!hash_table_allocate_table(hash_table)) {
+	/* Last reference is not lost, it is in old_table. */
+	/*@-mustfreeonly@*/
+	if (hash_table_allocate_table(hash_table) <= 0) {
+		/*@=mustfreeonly@*/
 
 		/* Failed to allocate the new table */
 
@@ -211,7 +237,9 @@ static int hash_table_enlarge(HashTable *hash_table)
 		hash_table->table_size = old_table_size;
 		hash_table->prime_index = old_prime_index;
 
+		/*@-compmempass@*/
 		return 0;
+		/*@=compmempass@*/
 	}
 
 	/* Link all entries from all chains into the new table */
@@ -232,8 +260,10 @@ static int hash_table_enlarge(HashTable *hash_table)
 
 			/* Link this entry into the chain */
 
+			/*@-unqualifiedtrans@*/
 			rover->next = hash_table->table[index];
 			hash_table->table[index] = rover;
+			/*@=unqualifiedtrans@*/
 
 			/* Advance to next in the chain */
 
@@ -245,11 +275,18 @@ static int hash_table_enlarge(HashTable *hash_table)
 
 	free(old_table);
 
+	/* hash_table->table is not dangling because hash_table_allocate_table has 
+	 * allocated a live pointer. 
+	 * hash_table->table is defined by func hash_table_allocate_table. */
+	/*@-usereleased-compdef@*/
 	return 1;
+	/*@=usereleased=compdef@*/
 }
 
-int hash_table_insert(HashTable *hash_table, HashTableKey key,
-                      HashTableValue value)
+int hash_table_insert(
+		/*@notnull@*/ /*@temp@*/ HashTable *hash_table, 
+		/*@null@*/ /*@dependent@*/ HashTableKey key,
+        /*@null@*/ /*@dependent@*/ HashTableValue value)
 {
 	HashTableEntry *rover;
 	HashTablePair *pair;
@@ -264,7 +301,7 @@ int hash_table_insert(HashTable *hash_table, HashTableKey key,
 
 		/* Table is more than 1/3 full */
 
-		if (!hash_table_enlarge(hash_table)) {
+		if (hash_table_enlarge(hash_table) <= 0) {
 
 			/* Failed to enlarge the table */
 
@@ -294,16 +331,22 @@ int hash_table_insert(HashTable *hash_table, HashTableKey key,
 			/* If there is a value free function, free the old data
 			 * before adding in the new data */
 
+			/* Ignore transfer warnings because memory model depends on whehter
+			 * or not value_free_func is not NULL. */
+			/*@-dependenttrans-branchstate@*/
 			if (hash_table->value_free_func != NULL) {
 				hash_table->value_free_func(pair->value);
 			}
+			/*@=dependenttrans=branchstate@*/
 
 			/* Same with the key: use the new key value and free
 			 * the old one */
 
+			/*@-dependenttrans-branchstate@*/
 			if (hash_table->key_free_func != NULL) {
 				hash_table->key_free_func(pair->key);
 			}
+			/*@=dependenttrans=branchstate@*/
 
 			pair->key = key;
 			pair->value = value;
@@ -329,8 +372,10 @@ int hash_table_insert(HashTable *hash_table, HashTableKey key,
 
 	/* Link into the list */
 
+	/*@-unqualifiedtrans@*/
 	newentry->next = hash_table->table[index];
 	hash_table->table[index] = newentry;
+	/*@=unqualifiedtrans@*/
 
 	/* Maintain the count of the number of entries */
 
@@ -341,7 +386,9 @@ int hash_table_insert(HashTable *hash_table, HashTableKey key,
 	return 1;
 }
 
-HashTableValue hash_table_lookup(HashTable *hash_table, HashTableKey key)
+/*@null@*/ /*@dependent@*/ HashTableValue hash_table_lookup(
+		/*@notnull@*/ /*@temp@*/ HashTable *hash_table, 
+		/*@null@*/ /*@temp@*/ HashTableKey key)
 {
 	HashTableEntry *rover;
 	HashTablePair *pair;
@@ -374,7 +421,9 @@ HashTableValue hash_table_lookup(HashTable *hash_table, HashTableKey key)
 	return HASH_TABLE_NULL;
 }
 
-int hash_table_remove(HashTable *hash_table, HashTableKey key)
+int hash_table_remove(
+		/*@notnull@*/ /*@temp@*/ HashTable *hash_table, 
+		/*@null@*/ /*@temp@*/ HashTableKey key)
 {
 	HashTableEntry **rover;
 	HashTableEntry *entry;
@@ -410,7 +459,9 @@ int hash_table_remove(HashTable *hash_table, HashTableKey key)
 
 			/* Destroy the entry structure */
 
+			/*@-nullstate@*/
 			hash_table_free_entry(hash_table, entry);
+			/*@=nullstate@*/
 
 			/* Track count of entries */
 
@@ -429,12 +480,15 @@ int hash_table_remove(HashTable *hash_table, HashTableKey key)
 	return result;
 }
 
-unsigned int hash_table_num_entries(HashTable *hash_table)
+unsigned int hash_table_num_entries(
+		/*@notnull@*/ /*@temp@*/ HashTable *hash_table)
 {
 	return hash_table->entries;
 }
 
-void hash_table_iterate(HashTable *hash_table, HashTableIterator *iterator)
+void hash_table_iterate(
+		/*@notnull@*/ /*@dependent@*/ HashTable *hash_table, 
+		/*@notnull@*/ /*@temp@*/ HashTableIterator *iterator)
 {
 	unsigned int chain;
 
@@ -456,12 +510,14 @@ void hash_table_iterate(HashTable *hash_table, HashTableIterator *iterator)
 	}
 }
 
-int hash_table_iter_has_more(HashTableIterator *iterator)
+int hash_table_iter_has_more(
+		/*@notnull@*/ /*@temp@*/ HashTableIterator *iterator)
 {
-	return iterator->next_entry != NULL;
+	return (int) (iterator->next_entry != NULL);
 }
 
-HashTablePair hash_table_iter_next(HashTableIterator *iterator)
+/*@null@*/ HashTablePair hash_table_iter_next(
+		/*@notnull@*/ /*@temp@*/ HashTableIterator *iterator)
 {
 	HashTableEntry *current_entry;
 	HashTable *hash_table;
@@ -473,6 +529,9 @@ HashTablePair hash_table_iter_next(HashTableIterator *iterator)
 	if (iterator->next_entry == NULL) {
 		return pair;
 	}
+
+	/* See the note in the doc block in the header file. */
+	/*@-onlytrans@*/
 
 	/* Result is immediately available */
 
@@ -515,5 +574,6 @@ HashTablePair hash_table_iter_next(HashTableIterator *iterator)
 	}
 
 	return pair;
+	/*@=onlytrans@*/
 }
 
