@@ -42,7 +42,6 @@ void list_free(/*@null@*/ /*@only@*/ ListEntry *list)
 
 	/* Iterate over each entry, freeing each list entry, until the
 	 * end is reached */
-
 	entry = list;
 
 	while (entry != NULL) {
@@ -93,7 +92,7 @@ void list_free(/*@null@*/ /*@only@*/ ListEntry *list)
 	return newentry;
 }
 
-/*@null@*/ /*@only@*/ ListEntry *list_append(
+/*@null@*/ /*@dependent@*/ ListEntry *list_append(
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@shared@*/ ListValue data)
 	/*@uses *list@*/

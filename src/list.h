@@ -67,13 +67,13 @@ extern "C" {
  * containing a pointer to NULL.
  */
 
-typedef /*@abstract@*/ struct _ListEntry ListEntry;
+typedef struct _ListEntry ListEntry;
 
 /**
  * Structure used to iterate over a list.
  */
 
-typedef /*@abstract@*/ struct _ListIterator ListIterator;
+typedef struct _ListIterator ListIterator;
 
 /**
  * A value stored in a list.
@@ -152,7 +152,7 @@ void list_free(/*@null@*/ /*@only@*/ ListEntry *list);
  *                     possible to allocate the memory for the new entry.
  */
 
-/*@null@*/ /*@only@*/ ListEntry *list_append(
+/*@null@*/ /*@dependent@*/ ListEntry *list_append(
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@shared@*/ ListValue data)
 	/*@uses *list@*/
