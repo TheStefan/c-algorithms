@@ -59,7 +59,6 @@ void list_free(/*@null@*/ /*@only@*/ ListEntry *list)
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@shared@*/ ListValue data)
 	/*@uses *list@*/
-	/*@requires owned *list@*/
 {
 	ListEntry *newentry;
 
@@ -89,14 +88,15 @@ void list_free(/*@null@*/ /*@only@*/ ListEntry *list)
 	newentry->next = *list;
 	*list = newentry;
 
+	/*@-compdef@*/
 	return newentry;
+	/*@=compdef@*/
 }
 
 /*@null@*/ /*@dependent@*/ ListEntry *list_append(
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@shared@*/ ListValue data)
 	/*@uses *list@*/
-	/*@requires owned *list@*/
 {
 	ListEntry *rover;
 	ListEntry *newentry;
@@ -282,7 +282,6 @@ int list_remove_entry(
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@dependent@*/ ListEntry *entry)
 	/*@uses *list@*/
-	/*@requires owned *list@*/
 {
 	/* If the list is empty, or entry is NULL, always fail */
 

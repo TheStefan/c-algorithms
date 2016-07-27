@@ -140,8 +140,7 @@ void list_free(/*@null@*/ /*@only@*/ ListEntry *list);
 /*@null@*/ /*@only@*/ ListEntry *list_prepend(
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@shared@*/ ListValue data)
-	/*@uses *list@*/
-	/*@requires owned *list@*/;
+	/*@uses *list@*/;
 
 /**
  * Append a value to the end of a list.
@@ -155,8 +154,7 @@ void list_free(/*@null@*/ /*@only@*/ ListEntry *list);
 /*@null@*/ /*@dependent@*/ ListEntry *list_append(
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@shared@*/ ListValue data)
-	/*@uses *list@*/
-	/*@requires owned *list@*/;
+	/*@uses *list@*/;
 
 /**
  * Retrieve the previous entry in a list.
@@ -258,8 +256,7 @@ unsigned int list_length(/*@null@*/ /*@temp@*/ ListEntry *list);
 int list_remove_entry(
 		/*@null@*/ /*@temp@*/ /*@special@*/ ListEntry **list, 
 		/*@null@*/ /*@dependent@*/ ListEntry *entry)
-	/*@uses *list@*/
-	/*@requires owned *list@*/;
+	/*@uses *list@*/;
 
 /**
  * Remove all occurrences of a particular value from a list.
