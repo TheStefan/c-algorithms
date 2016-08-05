@@ -163,6 +163,12 @@ static void tree_node_remove_child(/*@notnull@*/ /*@temp@*/ TreeNode* c)
 void tree_free(/*@null@*/ /*@only@*/ /*@in@*/ Tree* t)
 {
 	if (t != NULL) {
+		unsigned int i;
+		
+		for (i = 0; i < t->outDegree; i++) {
+			tree_free(t->children[i]);
+		}
+
 		free(t->children);
 		free(t);
 	}
